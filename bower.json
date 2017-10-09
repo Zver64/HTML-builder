@@ -13,12 +13,10 @@
   ],
   "dependencies": {
     "jquery": "^3.1.1",
-    "normalize-css": "normalize.css#^5.0.0",
-    "bootstrap-sass": "^3.3.7",
-    "font-awesome": "^4.7.0",
-    "owl.carousel": "^2.2.1",
     "animate.css": "^3.5.2",
     "wow": "wowjs#^1.1.2",
-    "fancybox": "^3.0.47"
-  }
+    "fancybox": "^3.0.47",
+    "bootstrap": "v4.0.0-beta"
+  },
+  "devDependencies": {}
 }
