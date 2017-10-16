@@ -34,7 +34,7 @@ var serve = {
     port: 3001,
     // tunnel: "geminis",
     logPrefix: "Geminis",
-    files: [path.dist.html + '*.html',path.dist.php + '**/*.php',path.dist.js + '*.js']
+    files: [path.tmp.html + '*.html',path.tmp.php + '**/*.php',path.tmp.js + '*.js']
 };
 
 var serveDist = {
@@ -215,7 +215,7 @@ gulp.task('default', ['light'], function() {
     browserSync.init(serve);
 
     gulp.watch(path.src.styles, ['styles:light']);
-    gulp.watch(path.src.html, ['html']);
+    gulp.watch(path.src.html, ['html:light']);
     gulp.watch(path.src.js, ['scripts']);
     gulp.watch(path.src.img, ['image:copy']);
 });
