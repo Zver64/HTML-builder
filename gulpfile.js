@@ -19,22 +19,59 @@ const MozJpeg = require('imagemin-mozjpeg');
 var gifsicle = require('imagemin-gifsicle');
 const imageminSvgo = require('imagemin-svgo');
 var path = require('./package.json').config;
+var htmlhint = require("gulp-htmlhint");
+var wiredep = require('wiredep').stream;
+var useref = require('useref');
 
-
-var config = {
-	server: "dist",
-	host: 'localhost',
-	port: 3001,
+var serve = {
+	server: {
+        baseDir: '.tmp',
+        routes: {
+          '/bower_components': 'bower_components'
+        }
+      },
+    host: 'localhost',
+    port: 3001,
     // tunnel: "geminis",
     logPrefix: "Geminis",
     files: [path.dist.html + '*.html',path.dist.php + '**/*.php',path.dist.js + '*.js']
 };
 
+var serveDist = {
+    server: "dist",
+    host: 'localhost',
+    port: 3001,
+    // tunnel: "geminis",
+    logPrefix: "Geminis"
+};
 
-gulp.task('html', function () {
+gulp.task('html:light', function () {
     gulp.src(path.src.htmlBuild) //Выберем файлы по нужному пути
         .pipe($.rigger())  //Прогоним через rigger
-        .pipe(gulp.dest('.tmp'))
+        .pipe(htmlhint())
+        .pipe(htmlhint.reporter('htmlhint-stylish'))
+        .pipe(wiredep({
+            exclude: ['bootstrap-sass'],
+            optional: 'configuration',
+            goes: 'here'
+        }))
+        .pipe(gulp.dest(path.tmp.html)) //Выплюнем их в папку temp
+    });
+
+
+gulp.task('html', ['styles', 'scripts'], function () {
+    gulp.src(path.src.htmlBuild) //Выберем файлы по нужному пути
+        .pipe($.rigger())  //Прогоним через rigger
+        .pipe(htmlhint())
+        .pipe(htmlhint.reporter('htmlhint-stylish'))
+        .pipe(wiredep({
+			// exclude: ['bootstrap-sass'],
+           optional: 'configuration',
+           goes: 'here'
+       }))
+        .pipe($.useref({searchPath: ['.tmp', 'src', '.']}))
+        .pipe($.if(/\.js$/, $.uglify({compress: {drop_console: true}})))
+        .pipe($.if(/\.css$/, $.postcss([csso])))
         // Minify any HTML
         .pipe($.if('*.html', $.htmlmin({
         	removeComments: true,
@@ -42,28 +79,24 @@ gulp.task('html', function () {
         	collapseBooleanAttributes: true,
         	removeEmptyAttributes: true,
         	removeScriptTypeAttributes: true,
-        	removeStyleLinkTypeAttributes: true,
+        	removeStyleLinkTypeAttributes: true
         })))
-        .pipe(gulp.dest(path.dist.html)) //Выплюнем их в папку build
+        .pipe(gulp.dest(path.dist.html))
     });
 
+gulp.task('libs', function () {
+ return gulp.src('src/libs/**/*.*')
+ .pipe($.newer('dist/libs/'))
+ .pipe(gulp.dest('dist/libs/'))
+})
 
 gulp.task('scripts', function () {
-	gulp.src([
-      'src/bower/bootstrap/dist/js/bootstrap.min.js',//other scripts
-      path.src.js
-      //other scripts
-      ])
-	.pipe($.newer(path.dist.js))
-	.pipe($.sourcemaps.init())
-	.pipe($.babel())
-    .pipe(gulp.dest('.tmp/assets/scripts/'))
-    .pipe($.uglify())
-      // Output files
-      .pipe($.size({title: 'scripts'}))
-      .pipe($.sourcemaps.write('./'))
-      .pipe(gulp.dest(path.dist.js))
-  });
+   gulp.src(path.src.js)
+   .pipe($.babel())
+    // Output files
+    .pipe($.size({title: 'scripts'}))
+    .pipe(gulp.dest(path.tmp.js))
+});
 
 var processors = [
 autoprefixer({
@@ -71,30 +104,9 @@ autoprefixer({
 }),
 mqpacker({
     sort: sortMediaQueries
-}),
-csso
+})
 ];
-gulp.task('styles:light', function () {
-  // For best performance, don't add Sass partials to `gulp.src`
-    return gulp.src(path.src.styles) //Выберем наш main.css
-    .pipe($.newer(path.dist.styles))
-    .pipe($.sass({
-        precision: 5
-    }).on('error', $.sass.logError))
-    .pipe($.postcss([
-        autoprefixer({
-            browsers: ['last 4 versions']
-        }),
-        mqpacker({
-            sort: sortMediaQueries
-        })
-        ]))
-    .pipe(gulp.dest('.tmp/assets/styles/'))
-    // Concatenate and minify styles
-    .pipe($.size({title: 'styles'}))
-    .pipe(gulp.dest(path.dist.styles))
-    .pipe(browserSync.stream());
-});
+
 gulp.task('styles', function () {
   // For best performance, don't add Sass partials to `gulp.src`
     return gulp.src(path.src.styles) //Выберем наш main.css
@@ -104,10 +116,9 @@ gulp.task('styles', function () {
     	precision: 5
     }).on('error', $.sass.logError))
     .pipe($.postcss(processors))
-    // Concatenate and minify styles
     .pipe($.size({title: 'styles'}))
     .pipe($.sourcemaps.write('./'))
-    .pipe(gulp.dest(path.dist.styles))
+    .pipe(gulp.dest(path.tmp.styles))
     .pipe(browserSync.stream());
 });
 function isMax(mq) {
@@ -137,44 +148,47 @@ function sortMediaQueries(a, b) {
 
 gulp.task('image:copy', function() {
     return gulp.src(path.src.img)
-    .pipe($.newer(path.dist.img))
-    .pipe(gulp.dest(path.dist.img))
+    .pipe($.newer(path.tmp.img))
+    .pipe(gulp.dest(path.tmp.img))
 })
 
 gulp.task('image:min', function () {
 
     return gulp.src(path.src.img) //Выберем наши картинки
     .pipe($.imagemin([
-    $.imagemin.gifsicle({interlaced: true}),
-    MozJpeg(),
-    $.imagemin.optipng({optimizationLevel: 5}),
-    $.imagemin.svgo({plugins: [{removeViewBox: true}]})
-]))
+        $.imagemin.gifsicle({interlaced: true}),
+        MozJpeg(),
+        $.imagemin.optipng({optimizationLevel: 5}),
+        $.imagemin.svgo({plugins: [{removeViewBox: true}]})
+        ]))
         .pipe(gulp.dest(path.dist.img)) //И бросим в build
         .pipe($.size({title: 'images'}))
     });
 
 gulp.task('fonts', function() {
-	gulp.src(path.src.fonts)
-	.pipe(gulp.dest(path.dist.fonts))
+ gulp.src(path.src.fonts)
+ .pipe(gulp.dest(path.tmp.fonts))
+ .pipe(gulp.dest(path.dist.fonts))
 });
 
 
 gulp.task('light', [
-	'html',
-	'scripts',
-	'styles:light',
-	'fonts',
-	'image:copy'
-	]);
+ 'libs',
+ 'html:light',
+ 'scripts',
+ 'styles',
+ 'fonts',
+ 'image:copy'
+ ]);
 
 gulp.task('full', [
-	'html',
-	'scripts',
-	'styles',
-	'fonts',
-	'image:min'
-	]);
+ 'libs',
+ 'html',
+ // 'scripts',
+ // 'styles',
+ 'fonts',
+ 'image:min'
+ ]);
 
 // Выгрузка изменений на хостинг
 gulp.task('deploy', function() {
@@ -198,7 +212,7 @@ gulp.task('clean', function () {
 
 
 gulp.task('default', ['light'], function() {
-    browserSync.init(config);
+    browserSync.init(serve);
 
     gulp.watch(path.src.styles, ['styles:light']);
     gulp.watch(path.src.html, ['html']);
@@ -207,6 +221,10 @@ gulp.task('default', ['light'], function() {
 });
 
 gulp.task('build', ['full']);
+
+gulp.task('build:serve', ['full'], function() {
+    browserSync.init(serveDist);
+});
 
 gulp.task('critical', ['build'], function () {
     return gulp.src('dist/*.html')
@@ -228,4 +246,14 @@ gulp.task('critical', ['build'], function () {
   }))
     .on('error', function(err) { $.util.log($.util.colors.red(err.message)); })
     .pipe(gulp.dest('dist'));
+});
+
+gulp.task('serve:dist', ['build'], () => {
+  browserSync.init({
+    notify: false,
+    port: 9000,
+    server: {
+      baseDir: ['dist']
+    }
+  });
 });
