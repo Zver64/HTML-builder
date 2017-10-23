@@ -48,10 +48,11 @@ var serveDist = {
 gulp.task('html:light', function () {
     gulp.src(path.src.htmlBuild) //Выберем файлы по нужному пути
         .pipe($.rigger())  //Прогоним через rigger
-        .pipe(htmlhint())
+        // .pipe(htmlhint())
+        .pipe($.html5Lint());
         .pipe(htmlhint.reporter('htmlhint-stylish'))
         .pipe(wiredep({
-            exclude: ['bootstrap-sass'],
+            // exclude: ['bootstrap-sass'],
             optional: 'configuration',
             goes: 'here'
         }))
@@ -203,7 +204,7 @@ gulp.task('deploy', function() {
     'dist/**'
     ];
     return gulp.src(globs, {buffer: false})
-    .pipe(conn.dest('/010-dubai.gem-test.ru/'));
+    .pipe(conn.dest('/011-automat.gem-test.ru'));
 });
 
 gulp.task('clean', function () {
@@ -214,17 +215,13 @@ gulp.task('clean', function () {
 gulp.task('default', ['light'], function() {
     browserSync.init(serve);
 
-    gulp.watch(path.src.styles, ['styles:light']);
+    gulp.watch(path.src.styles, ['styles']);
     gulp.watch(path.src.html, ['html:light']);
     gulp.watch(path.src.js, ['scripts']);
     gulp.watch(path.src.img, ['image:copy']);
 });
 
 gulp.task('build', ['full']);
-
-gulp.task('build:serve', ['full'], function() {
-    browserSync.init(serveDist);
-});
 
 gulp.task('critical', ['build'], function () {
     return gulp.src('dist/*.html')
@@ -248,7 +245,17 @@ gulp.task('critical', ['build'], function () {
     .pipe(gulp.dest('dist'));
 });
 
-gulp.task('serve:dist', ['build'], () => {
+gulp.task('build:serve', ['build'], () => {
+  browserSync.init({
+    notify: false,
+    port: 9000,
+    server: {
+      baseDir: ['dist']
+    }
+  });
+});
+
+gulp.task('serve:only', () => {
   browserSync.init({
     notify: false,
     port: 9000,
