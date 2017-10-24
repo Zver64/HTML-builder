@@ -22,16 +22,17 @@ var path = require('./package.json').config;
 var htmlhint = require("gulp-htmlhint");
 var wiredep = require('wiredep').stream;
 var useref = require('useref');
+var nunjucksRender = require('gulp-nunjucks-render');
 
 var serve = {
 	server: {
         baseDir: '.tmp',
         routes: {
           '/bower_components': 'bower_components'
-        }
-      },
-    host: 'localhost',
-    port: 3001,
+      }
+  },
+  host: 'localhost',
+  port: 3001,
     // tunnel: "geminis",
     logPrefix: "Geminis",
     files: [path.tmp.html + '*.html',path.tmp.php + '**/*.php',path.tmp.js + '*.js']
@@ -47,9 +48,10 @@ var serveDist = {
 
 gulp.task('html:light', function () {
     gulp.src(path.src.htmlBuild) //Выберем файлы по нужному пути
-        .pipe($.rigger())  //Прогоним через rigger
-        // .pipe(htmlhint())
-        .pipe($.html5Lint());
+        .pipe(nunjucksRender({
+              path: ['src/'] // String or Array
+          }))
+        .pipe(htmlhint())
         .pipe(htmlhint.reporter('htmlhint-stylish'))
         .pipe(wiredep({
             // exclude: ['bootstrap-sass'],
@@ -62,14 +64,16 @@ gulp.task('html:light', function () {
 
 gulp.task('html', ['styles', 'scripts'], function () {
     gulp.src(path.src.htmlBuild) //Выберем файлы по нужному пути
-        .pipe($.rigger())  //Прогоним через rigger
+        .pipe(nunjucksRender({
+              path: ['src/'] // String or Array
+          }))
         .pipe(htmlhint())
         .pipe(htmlhint.reporter('htmlhint-stylish'))
         .pipe(wiredep({
 			// exclude: ['bootstrap-sass'],
-           optional: 'configuration',
-           goes: 'here'
-       }))
+         optional: 'configuration',
+         goes: 'here'
+     }))
         .pipe($.useref({searchPath: ['.tmp', 'src', '.']}))
         .pipe($.if(/\.js$/, $.uglify({compress: {drop_console: true}})))
         .pipe($.if(/\.css$/, $.postcss([csso])))
@@ -86,14 +90,14 @@ gulp.task('html', ['styles', 'scripts'], function () {
     });
 
 gulp.task('libs', function () {
- return gulp.src('src/libs/**/*.*')
- .pipe($.newer('dist/libs/'))
- .pipe(gulp.dest('dist/libs/'))
+   return gulp.src('src/libs/**/*.*')
+   .pipe($.newer('dist/libs/'))
+   .pipe(gulp.dest('dist/libs/'))
 })
 
 gulp.task('scripts', function () {
-   gulp.src(path.src.js)
-   .pipe($.babel())
+ gulp.src(path.src.js)
+ .pipe($.babel())
     // Output files
     .pipe($.size({title: 'scripts'}))
     .pipe(gulp.dest(path.tmp.js))
@@ -167,24 +171,24 @@ gulp.task('image:min', function () {
     });
 
 gulp.task('fonts', function() {
- gulp.src(path.src.fonts)
- .pipe(gulp.dest(path.tmp.fonts))
- .pipe(gulp.dest(path.dist.fonts))
+   gulp.src(path.src.fonts)
+   .pipe(gulp.dest(path.tmp.fonts))
+   .pipe(gulp.dest(path.dist.fonts))
 });
 
 
 gulp.task('light', [
- 'libs',
- 'html:light',
- 'scripts',
- 'styles',
- 'fonts',
- 'image:copy'
- ]);
+   'libs',
+   'html:light',
+   'scripts',
+   'styles',
+   'fonts',
+   'image:copy'
+   ]);
 
 gulp.task('full', [
- 'libs',
- 'html',
+   'libs',
+   'html',
  // 'scripts',
  // 'styles',
  'fonts',
@@ -251,8 +255,8 @@ gulp.task('build:serve', ['build'], () => {
     port: 9000,
     server: {
       baseDir: ['dist']
-    }
-  });
+  }
+});
 });
 
 gulp.task('serve:only', () => {
@@ -261,6 +265,6 @@ gulp.task('serve:only', () => {
     port: 9000,
     server: {
       baseDir: ['dist']
-    }
-  });
+  }
+});
 });
