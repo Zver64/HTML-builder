@@ -1,6 +1,6 @@
 {
-  "name": "oreon_pro",
-  "description": "004_project",
+  "name": "Your website",
+  "description": "frontend",
   "main": "",
   "license": "MIT",
   "homepage": "",
@@ -12,7 +12,11 @@
     "tests"
   ],
   "dependencies": {
-    
+    "normalize-css": "^7.0.0",
+    "slick-carousel": "^1.8.1",
+    "lazysizes": "^4.0.1"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "bootstrap-sass-grid": "^4.0.1"
+  }
 }

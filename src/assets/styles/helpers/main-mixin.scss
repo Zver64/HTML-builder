@@ -1,0 +1,22 @@
+/* Begin mixins */
+// width
+@mixin r($width){
+	@media only screen and (max-width: $width+ "px"){
+		@content;
+	}
+}
+@mixin rmin($width){
+	@media only screen and (min-width: $width+ "px"){
+		@content;
+	}
+}
+@mixin range($max,$min){
+	@media only screen and (max-width: $max+ "px") and (min-width: $min+ "px"){
+		@content;
+	}
+}
+/* End mixins */
+
+/* Begin variables */
+
+/* End variables */

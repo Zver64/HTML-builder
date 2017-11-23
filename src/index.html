@@ -3,12 +3,13 @@
 <head>
 	<meta charset="UTF-8">
 	<title>West East Wear</title>
-	//= blocks/head.html
+	{% include "blocks/head.html" %}
 </head>
 <body>
-	//= blocks/header.html
-	//= blocks/main.html
-	//= blocks/footer.html
-	//= blocks/functions.html
+	
+	{% include "blocks/header.html" %}
+	
+	{% include "blocks/footer.html" %}
+	{% include "blocks/functions.html" %}
 </body>
 </html>

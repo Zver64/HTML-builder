@@ -4,10 +4,10 @@
 
 var gulp = require('gulp');
 var gulpLoadPlugins = require('gulp-load-plugins');
-var browserSync = require('browser-sync');
+var browserSync = require('browser-sync').create();
+var reload = browserSync.reload;
 var runSequence = require('run-sequence');
 var del = require('del');
-var reload = browserSync.reload;
 var csso = require('postcss-csso');
 var ftp = require('vinyl-ftp');
 const $ = gulpLoadPlugins();
@@ -29,46 +29,45 @@ var serve = {
         baseDir: '.tmp',
         routes: {
           '/bower_components': 'bower_components'
-      }
+        }
   },
   host: 'localhost',
-  port: 3001,
-    // tunnel: "geminis",
-    logPrefix: "Geminis",
-    files: [path.tmp.html + '*.html',path.tmp.php + '**/*.php',path.tmp.js + '*.js']
-};
-
-var serveDist = {
-    server: "dist",
-    host: 'localhost',
-    port: 3001,
+  port: 3000,
+  open: false,
     // tunnel: "geminis",
     logPrefix: "Geminis"
 };
 
+var serveDist = {
+    server: {
+      baseDir: './.tmp',
+       directory: true
+    },
+    host: 'localhost',
+    port: 3001,
+    https: true,
+    // tunnel: "geminis",
+    logPrefix: "Geminis"
+};
+
+
 gulp.task('html:light', function () {
-    gulp.src(path.src.htmlBuild) //Выберем файлы по нужному пути
+    gulp.src(path.src.html + '*.html') //Выберем файлы по нужному пути
         .pipe(nunjucksRender({
-              path: ['src/'] // String or Array
+              path: [path.src.html + 'blocks'] // String or Array
           }))
         .pipe(htmlhint())
         .pipe(htmlhint.reporter('htmlhint-stylish'))
-        .pipe(wiredep({
-            // exclude: ['bootstrap-sass'],
-            optional: 'configuration',
-            goes: 'here'
-        }))
-        .pipe(gulp.dest(path.tmp.html)) //Выплюнем их в папку temp
+        .pipe(wiredep())
+        // .pipe($.changed(path.tmp.html)) //Выплюнем их в папку temp
+        .pipe(gulp.dest(path.tmp.html))
     });
 
-
 gulp.task('html', ['styles', 'scripts'], function () {
-    gulp.src(path.src.htmlBuild) //Выберем файлы по нужному пути
+    gulp.src(path.src.html + '*.html') //Выберем файлы по нужному пути
         .pipe(nunjucksRender({
-              path: ['src/'] // String or Array
+              path: [path.src.html + 'blocks'] // String or Array
           }))
-        .pipe(htmlhint())
-        .pipe(htmlhint.reporter('htmlhint-stylish'))
         .pipe(wiredep({
 			// exclude: ['bootstrap-sass'],
          optional: 'configuration',
@@ -76,6 +75,10 @@ gulp.task('html', ['styles', 'scripts'], function () {
      }))
         .pipe($.useref({searchPath: ['.tmp', 'src', '.']}))
         .pipe($.if(/\.js$/, $.uglify({compress: {drop_console: true}})))
+        .pipe($.if(/\.css$/, $.base64({
+          extensions: ['svg', 'png'],
+          maxImageSize: 8*1024, // bytes 
+        })))
         .pipe($.if(/\.css$/, $.postcss([csso])))
         // Minify any HTML
         .pipe($.if('*.html', $.htmlmin({
@@ -89,18 +92,19 @@ gulp.task('html', ['styles', 'scripts'], function () {
         .pipe(gulp.dest(path.dist.html))
     });
 
-gulp.task('libs', function () {
-   return gulp.src('src/libs/**/*.*')
-   .pipe($.newer('dist/libs/'))
-   .pipe(gulp.dest('dist/libs/'))
+gulp.task('ajax', function () {
+   return gulp.src('src/ajax/*.html')
+   .pipe(gulp.dest('.tmp/ajax/'))
+   .pipe(gulp.dest('dist/ajax/'))
 })
 
 gulp.task('scripts', function () {
- gulp.src(path.src.js)
- .pipe($.babel())
+ gulp.src(path.src.js + '*.js')
+    .pipe($.babel())
     // Output files
     .pipe($.size({title: 'scripts'}))
     .pipe(gulp.dest(path.tmp.js))
+    .pipe(browserSync.stream({once: true}));
 });
 
 var processors = [
@@ -114,7 +118,7 @@ mqpacker({
 
 gulp.task('styles', function () {
   // For best performance, don't add Sass partials to `gulp.src`
-    return gulp.src(path.src.styles) //Выберем наш main.css
+    return gulp.src(path.src.styles + "*.scss") //Выберем наш main.css
     .pipe($.newer(path.dist.styles))
     .pipe($.sourcemaps.init())
     .pipe($.sass({
@@ -151,18 +155,46 @@ function sortMediaQueries(a, b) {
     return 1;
 }
 
+// Sprites
+
+var config                  = {
+    mode: {
+        symbol: {
+            sprite: "assets/images/sprite.svg",
+            dest            : '.',
+            bust: false,
+            prefix          : ".svg-%s",
+            // dimensions      : false,
+            render: {
+                scss: {
+                    dest:'../src/assets/styles/_sprites.scss'
+                    // template: assetsDir + "sass/templates/_sprite_template.less"
+                }
+            }
+        }
+    }
+}
+
+
+gulp.task('svgsprites', function () {
+    return gulp.src(path.src.img + 'icons/*.svg')
+        .pipe($.svgSprite(config))
+        .pipe(gulp.dest(path.tmp.html))
+        .pipe(gulp.dest(path.dist.html));
+});
+
 gulp.task('image:copy', function() {
-    return gulp.src(path.src.img)
+    return gulp.src(path.src.img + '**/*.*')
     .pipe($.newer(path.tmp.img))
     .pipe(gulp.dest(path.tmp.img))
 })
 
 gulp.task('image:min', function () {
 
-    return gulp.src(path.src.img) //Выберем наши картинки
+    return gulp.src(path.src.img + '**/*.*') //Выберем наши картинки
     .pipe($.imagemin([
         $.imagemin.gifsicle({interlaced: true}),
-        MozJpeg(),
+        MozJpeg({quality: 90}),
         $.imagemin.optipng({optimizationLevel: 5}),
         $.imagemin.svgo({plugins: [{removeViewBox: true}]})
         ]))
@@ -178,8 +210,9 @@ gulp.task('fonts', function() {
 
 
 gulp.task('light', [
-   'libs',
+   'ajax',
    'html:light',
+   'svgsprites',
    'scripts',
    'styles',
    'fonts',
@@ -187,12 +220,13 @@ gulp.task('light', [
    ]);
 
 gulp.task('full', [
-   'libs',
+   'ajax',
    'html',
+   'svgsprites',
  // 'scripts',
  // 'styles',
- 'fonts',
- 'image:min'
+   'fonts',
+   'image:min'
  ]);
 
 // Выгрузка изменений на хостинг
@@ -208,21 +242,30 @@ gulp.task('deploy', function() {
     'dist/**'
     ];
     return gulp.src(globs, {buffer: false})
-    .pipe(conn.dest('/011-automat.gem-test.ru'));
+    .pipe(conn.dest('/012-fitspirit.gem-test.ru'));
 });
 
 gulp.task('clean', function () {
 	del(['dist/*','.tmp/*'], {dot: true});
 });
 
+gulp.task('njk-watch', ['html:light'], function (done) {
+  setTimeout(function() {
+    browserSync.reload();
+    done();
+  }, 300)
+});
+
 
 gulp.task('default', ['light'], function() {
     browserSync.init(serve);
 
-    gulp.watch(path.src.styles, ['styles']);
-    gulp.watch(path.src.html, ['html:light']);
-    gulp.watch(path.src.js, ['scripts']);
-    gulp.watch(path.src.img, ['image:copy']);
+    gulp.watch(path.src.styles + '*.scss', ['styles']);
+    gulp.watch('src/ajax/*.html', ['ajax']);
+    gulp.watch(path.src.html + '**/*.html', ['njk-watch']);
+    gulp.watch(path.src.js + '*.js', ['scripts']);
+    gulp.watch(path.src.img + '**/*.*', ['image:copy']);
+    gulp.watch(path.src.img + 'icons/*.svg', ['svgsprites']);
 });
 
 gulp.task('build', ['full']);
