@@ -81,14 +81,14 @@ gulp.task('html', ['styles', 'scripts'], function () {
         })))
         .pipe($.if(/\.css$/, $.postcss([csso])))
         // Minify any HTML
-        .pipe($.if('*.html', $.htmlmin({
-        	removeComments: true,
-        	collapseWhitespace: true,
-        	collapseBooleanAttributes: true,
-        	removeEmptyAttributes: true,
-        	removeScriptTypeAttributes: true,
-        	removeStyleLinkTypeAttributes: true
-        })))
+        // .pipe($.if('*.html', $.htmlmin({
+        // 	removeComments: true,
+        // 	collapseWhitespace: true,
+        // 	collapseBooleanAttributes: true,
+        // 	removeEmptyAttributes: true,
+        // 	removeScriptTypeAttributes: true,
+        // 	removeStyleLinkTypeAttributes: true
+        // })))
         .pipe(gulp.dest(path.dist.html))
     });
 
