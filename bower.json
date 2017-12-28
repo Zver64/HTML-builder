@@ -17,6 +17,5 @@
     "lazysizes": "^4.0.1"
   },
   "devDependencies": {
-    "bootstrap-sass-grid": "^4.0.1"
   }
 }
