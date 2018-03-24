@@ -250,7 +250,7 @@ gulp.task('njk-watch', ['html:light'], function (done) {
   setTimeout(function() {
     browserSync.reload();
     done();
-  }, 500)
+  }, 300)
 });
 
 
